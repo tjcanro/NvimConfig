@@ -18,7 +18,24 @@ return {
         hide_gitignored = false,
       },
     },
-    window = { width = 36 },
+    window = {
+      width = 36,
+      mappings = {
+        ["<leader>fd"] = function(state)
+          local node = state.tree:get_node()
+          local path = node:get_id()
+
+          if node.type ~= "directory" then
+            path = vim.fs.dirname(path)
+          end
+
+          require("telescope.builtin").live_grep({
+            cwd = path,
+            prompt_title = "Search " .. vim.fn.fnamemodify(path, ":~:."),
+          })
+        end,
+      },
+    },
   },
   keys = {
     { "<C-n>", "<cmd>Neotree toggle reveal filesystem left<CR>", desc = "Toggle file tree" },

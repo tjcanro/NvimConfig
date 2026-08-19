@@ -32,6 +32,7 @@ return {
         { "<leader>d", group = "Diagnostics" },
         { "<leader>e", group = "Explorer" },
         { "<leader>f", group = "Find / Format" },
+        { "<leader>g", group = "Git review" },
         { "<leader>h", group = "Git hunks" },
         { "<leader>r", group = "Rename" },
         { "<leader>w", group = "Workspace / Write" },

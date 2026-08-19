@@ -48,6 +48,8 @@ Run `neo-help` from a new shell to open this README in Neovim at any time.
 | --- | --- |
 | Find files | `Ctrl-p` or `<leader>ff` |
 | Search repository text | `<leader>fg` |
+| Search repository for word under cursor | `<leader>fw` |
+| Search selected Neo-tree directory | `<leader>fd` from Neo-tree |
 | Search current buffer | `/` |
 | Find open buffers | `<leader>fb` |
 | Recent files | `<leader>fr` |
@@ -74,6 +76,7 @@ Dotfiles, Git-ignored files, and other filtered entries are visible by default.
 | Make the selected directory the tree root | `.` |
 | Move the tree root up one directory | `Backspace` |
 | Find a directory | `D` |
+| Search contents of selected directory | `<leader>fd` |
 | Collapse the selected directory / all directories | `C` / `z` |
 | Toggle hidden items manually | `H` |
 | Show all Neo-tree mappings | `?` |
@@ -111,7 +114,7 @@ example, `5`, `Ctrl-w`, `>` widens the current window by five columns.
 ### Bottom terminal
 
 Press `<leader>~` (`Space`, then `Shift-backtick`) to open a reusable terminal
-in a 15-row split at the bottom. Press the same mapping from either the editor
+in a 10-row split at the bottom. Press the same mapping from either the editor
 or terminal to hide it; reopening it preserves the running shell. The
 `:BottomTerminalToggle` command provides the same operation.
 
@@ -183,6 +186,60 @@ back on. `:ConformInfo` shows the formatter selected for the current file.
 `nvim-surround` keeps its standard mappings: `ys` adds a surrounding pair,
 `ds` deletes it, and `cs` changes it. `gcc` comments a line and `gc` comments a
 motion or visual selection.
+
+### Code review
+
+Diffview provides a repository-wide review of every changed file. Gitsigns is
+best for uncommitted hunks in the working tree; Diffview is best for the full
+PR or MR range.
+
+| Operation | Mapping or command |
+| --- | --- |
+| Open working-tree diff | `<leader>go` or `:DiffviewOpen` |
+| Open a PR-style branch diff | `:DiffviewOpen origin/main...HEAD` |
+| Close the review | `<leader>gc` or `:DiffviewClose` |
+| Focus / toggle changed-file list | `<leader>gf` / `:DiffviewToggleFiles` |
+| Current file / repository history | `<leader>gh` / `<leader>gH` |
+| Next / previous changed file | `Tab` / `Shift-Tab` |
+| Next / previous diff hunk | `]c` / `[c` |
+| Show Diffview's contextual mappings | `g?` |
+
+This workstation also installs two shell helpers:
+
+```bash
+review-pr 123
+review-mr 456
+```
+
+Each helper creates or refreshes an isolated worktree under
+`~/Workspace/reviews/`, fetches the PR or MR head and target branch, and opens a
+reusable tmux session. Neovim starts with the exact `<base>...HEAD` Diffview and
+the bottom terminal on the left; `claude --agent code-reviewer` starts on the
+right. Running the same command again reuses the worktree and tmux session.
+
+Run a helper from its repository, or pass a checkout explicitly:
+
+```bash
+review-pr 123 --repo ~/Workspace/infra-controller
+review-mr 456 --repo ~/Workspace/rackmanagementservice
+review-pr 123 --prepare-only
+```
+
+When no repository is supplied and the current directory is not an appropriate
+checkout, `review-pr` defaults to `~/Workspace/infra-controller` and
+`review-mr` defaults to `~/Workspace/rackmanagementservice`. Set
+`CODE_REVIEW_ROOT` to change where review worktrees are stored.
+
+The personal Claude reviewer is defined at
+`~/.claude/agents/code-reviewer.md`. Start it manually from any checkout with:
+
+```bash
+claude --agent code-reviewer "Review origin/main...HEAD"
+```
+
+It is read-only: it can inspect the repository and run checks, but it does not
+edit code or submit review decisions. Its output is severity-ordered findings
+with exact file locations, trigger scenarios, checks run, and unresolved risks.
 
 ## Languages and tools
 

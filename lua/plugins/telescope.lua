@@ -41,6 +41,7 @@ return {
       { "<C-p>", builtin.find_files, desc = "Find files" },
       { "<leader>ff", builtin.find_files, desc = "Find files" },
       { "<leader>fg", builtin.live_grep, desc = "Live grep" },
+      { "<leader>fw", builtin.grep_string, desc = "Find word under cursor" },
       { "<leader>fb", builtin.buffers, desc = "Find buffers" },
       { "<leader>fh", builtin.help_tags, desc = "Find help" },
       { "<leader>fr", builtin.oldfiles, desc = "Recent files" },

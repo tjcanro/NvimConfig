@@ -1,4 +1,5 @@
 local map = vim.keymap.set
+local bottom_terminal_height = 10
 
 map("n", "<Esc>", "<cmd>nohlsearch<CR>", { desc = "Clear search highlight" })
 map("n", "<leader>w", "<cmd>write<CR>", { desc = "Write file" })
@@ -33,7 +34,7 @@ local function toggle_bottom_terminal()
     if vim.api.nvim_buf_is_valid(buf) and vim.b[buf].bottom_terminal then
       local job = vim.b[buf].terminal_job_id
       if job and vim.fn.jobwait({ job }, 0)[1] == -1 then
-        vim.cmd("botright 15split")
+        vim.cmd(("botright %dsplit"):format(bottom_terminal_height))
         vim.api.nvim_win_set_buf(0, buf)
         vim.cmd.startinsert()
         return
@@ -42,7 +43,7 @@ local function toggle_bottom_terminal()
     end
   end
 
-  vim.cmd("botright 15new")
+  vim.cmd(("botright %dnew"):format(bottom_terminal_height))
   vim.cmd.terminal()
   vim.b.bottom_terminal = true
   vim.bo.bufhidden = "hide"
