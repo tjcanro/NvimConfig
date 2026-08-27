@@ -34,6 +34,7 @@ return {
         { "<leader>f", group = "Find / Format" },
         { "<leader>g", group = "Git review" },
         { "<leader>h", group = "Git hunks" },
+        { "<leader>R", group = "Remote" },
         { "<leader>r", group = "Rename" },
         { "<leader>w", group = "Workspace / Write" },
       },

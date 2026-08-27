@@ -54,4 +54,14 @@ vim.api.nvim_create_user_command("BottomTerminalToggle", toggle_bottom_terminal,
   desc = "Toggle the reusable bottom terminal",
 })
 
-map({ "n", "t" }, "<leader>~", toggle_bottom_terminal, { desc = "Toggle bottom terminal" })
+local function toggle_context_terminal()
+  local ok, session_manager = pcall(require, "remote-session.session_manager")
+  if ok and session_manager.get_active_session_id() then
+    vim.cmd("RemoteTerminalToggle")
+    return
+  end
+
+  toggle_bottom_terminal()
+end
+
+map({ "n", "t" }, "<leader>~", toggle_context_terminal, { desc = "Toggle local or remote terminal" })

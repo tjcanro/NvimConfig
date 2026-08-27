@@ -46,8 +46,8 @@ Run `neo-help` from a new shell to open this README in Neovim at any time.
 
 | Operation | Mapping |
 | --- | --- |
-| Find files | `Ctrl-p` or `<leader>ff` |
-| Search repository text | `<leader>fg` |
+| Find files in the local or active remote repository | `Ctrl-p` or `<leader>ff` |
+| Search repository text (local or active remote) | `<leader>fg` |
 | Search repository for word under cursor | `<leader>fw` |
 | Search selected Neo-tree directory | `<leader>fd` from Neo-tree |
 | Search current buffer | `/` |
@@ -126,6 +126,79 @@ or terminal to hide it; reopening it preserves the running shell. The
 | Move from terminal to editor above | `Esc`, `Esc`, then `Ctrl-w`, `k` |
 | Close the terminal process | Type `exit` in the shell |
 
+### Remote servers
+
+The `nico-dev` tmuxp session starts a local Neovim connected to
+`colossus-dev:/home/tcanro/infra-controller-dev`. Neovim, its configuration,
+and its plugins remain on the Mac. Remote files are fetched and saved over
+SSH/rsync, while the integrated terminal runs on `colossus-dev`. Nothing is
+installed on the remote host by this setup. Its standard layout is a
+full-height tree on the left, the editor at upper right, and the remote
+terminal below the editor.
+
+Open any other server or repository with:
+
+```vim
+:RemoteSession host//absolute/path
+```
+
+For example:
+
+```vim
+:RemoteSession colossus-dev//home/tcanro/infra-controller-dev
+```
+
+| Operation | Mapping or command |
+| --- | --- |
+| Open a remote session | `<leader>Ro` or `:RemoteSession` |
+| Reopen/switch a remembered session | `<leader>Rp` or `:RemoteSessionPicker` |
+| Find files in the remote repository | `Ctrl-p` or `<leader>ff` |
+| Live grep the current remote repository | `<leader>Rg` |
+| Toggle the remote bottom terminal | `<leader>~`, `<leader>Rt`, or `:RemoteTerminalToggle` |
+| Close the current remote session | `<leader>Rx` or `:RemoteSessionClose` |
+| Refresh the current remote file | `:RemoteRefresh` |
+
+The remote tree uses `j`/`k` to move, `Enter` to open or expand, `Space` to
+expand without opening, `a` to create a file, `A` to create a directory, `d`
+to delete with confirmation, `R` to refresh, `q` to hide, and `?` for help.
+Hidden files are shown. Saves are explicit: `:w` asynchronously writes the
+buffer back to the server. Automatic save-on-change is deliberately disabled.
+The tree follows the editor automatically: opening a remote file through file
+search, live grep, or a diff expands its parent directories and selects it
+without moving focus away from the editor.
+
+Remote buffers are checked for changes made by another process every five
+seconds, so edits from the remote Sidekick agent appear automatically. Use
+`:RemoteRefresh` when an immediate refresh is needed. Background
+recursive directory warming is disabled to avoid opening hundreds of SSH
+connections in large monorepos; directories load when expanded.
+
+`<leader>fg` automatically uses the active remote session when one exists;
+`<leader>Rg` is the explicit remote-only alias. Both provide the same
+incremental Telescope-style search experience, but remote search runs `git
+grep` inside the repository over SSH. Results and previews update while typing,
+and `Enter` opens the matching remote file at its line and column. It searches
+tracked files in the remote working tree; no remote Neovim or ripgrep
+installation is required.
+
+Remote file search uses one `git ls-files` call over SSH instead of scanning
+the Mac. It includes tracked files and non-ignored untracked files, including
+dotfiles, while excluding paths ignored by Git.
+
+Tree-sitter syntax and ordinary text search need no remote editor install.
+Semantic LSP actions such as `gd`, `gr`, and `gi` require the corresponding
+language server to already exist in the active remote toolchain. For this
+repository, `colossus-dev` currently lacks the Rust analyzer component for its
+Rust 1.97.1 toolchain. If remote installation is approved later, the minimal
+upgrade is:
+
+```bash
+ssh colossus-dev 'rustup component add rust-analyzer --toolchain 1.97.1'
+```
+
+After that, reopen the Rust buffer or run `:RemoteLspStart`. This command is
+documented only; the Neovim setup does not run it.
+
 ### tmux panes and windows
 
 The tmux prefix is `Ctrl-Space`. It is also sequential: press and release the
@@ -195,7 +268,7 @@ PR or MR range.
 
 | Operation | Mapping or command |
 | --- | --- |
-| Open working-tree diff | `<leader>go` or `:DiffviewOpen` |
+| Open working-tree diff (local or active remote) | `<leader>go` |
 | Open a PR-style branch diff | `:DiffviewOpen origin/main...HEAD` |
 | Close the review | `<leader>gc` or `:DiffviewClose` |
 | Focus / toggle changed-file list | `<leader>gf` / `:DiffviewToggleFiles` |
@@ -203,6 +276,12 @@ PR or MR range.
 | Next / previous changed file | `Tab` / `Shift-Tab` |
 | Next / previous diff hunk | `]c` / `[c` |
 | Show Diffview's contextual mappings | `g?` |
+
+With a remote session active, `<leader>go` opens a read-only diff fetched from
+that server instead of Diffview's local repository. Use `]c`/`[c` for the next
+or previous hunk, `+`/`-` to add or remove context lines, `R` to refresh,
+`Enter` to open the current diff's file back in the remote editor, and `q` or
+`<leader>gc` to close it.
 
 This workstation also installs two shell helpers:
 
@@ -281,6 +360,7 @@ CLI.
 | --- | --- |
 | Toggle current AI CLI | `<leader>aa` |
 | Select an installed CLI | `<leader>as` |
+| Start a new independent Claude session | `<leader>an` |
 | Prompt with editor context | `<leader>ap` |
 | Send the current file or selection | `<leader>at` |
 | Focus the agent terminal | `Ctrl-.` |
@@ -290,6 +370,36 @@ Codex and Claude are enabled as choices. Run `codex login` or the equivalent
 Claude login before first use. Sidekick's Next Edit Suggestions are disabled by
 default because that feature requires GitHub Copilot; the CLI integration does
 not.
+
+Sidekick maintains one primary session for each CLI and working directory, so
+the session picker normally attaches to an existing process. Use `<leader>an`
+when you need a genuinely new Claude conversation. It opens the new process in
+Sidekick's right-hand editor panel at the current repository root. Each press
+creates another independent tmux-backed process and replaces the visible agent
+panel; earlier conversations remain running and are available through
+`<leader>as`.
+
+When a `colossus-dev` remote session is active, `<leader>aa`, `<leader>ap`,
+`<leader>at`, and `Ctrl-.` automatically use Claude inside the persistent
+`nico-agent` tmux session on the server. The agent starts in
+`/home/tcanro/sim-pods` with the dedicated `simulation-helper` role. The
+`/home/tcanro/infra-controller-dev` checkout is also explicitly allowed, so the
+agent can coordinate source edits with the host-side lab build, sync, deploy,
+and verification workflow rather than touching similarly named files on the
+Mac.
+Sidekick converts the current `rsync://` buffer URL into the corresponding
+remote path before sending context. The remote file watcher displays agent
+edits within about five seconds; use `:RemoteRefresh` for an immediate refresh.
+With that remote session active, `<leader>an` instead displays a new Claude in
+the same right-hand editor panel while its process runs in a uniquely named
+`nico-claude-*` tmux session on `colossus-dev`. It starts at the active remote
+repository path, not in the similarly named local checkout. Use `<leader>as` to
+switch between the primary and additional conversations.
+
+The first launch may ask whether the remote repository is trusted. Confirm it
+once in the Sidekick terminal. Remote Codex is installed as well, but it must be
+authenticated on `colossus-dev` before adding it as another automatic remote
+tool.
 
 For this workstation, the recommended workflow is still one editor pane plus a
 dedicated agent pane in tmux. Sidekick is best for sending a precise selection,
@@ -329,8 +439,14 @@ terminal to use a Nerd Font if file icons render as squares.
 
 ## Troubleshooting
 
-- No search results: confirm `rg --version` works.
-- Missing icons: select the installed Nerd Font in the terminal profile.
+- No local search results: confirm `rg --version` works.
+- No remote search results: confirm the remote path is a Git working tree;
+  remote live grep searches tracked files with `git grep`.
+- Missing icons: use JetBrainsMono Nerd Font for both normal and non-ASCII text.
+  The `nico-dev` and `rms-dev` launch commands select the `Nerd Font` iTerm
+  profile through tmux terminal passthrough. If iTerm was already running when
+  its profile changed, fully quit and reopen iTerm so it reloads the font; the
+  tmux sessions remain available to reattach.
 - LSP does not attach: run `:checkhealth vim.lsp`, then check `:Mason` and the
   repository root markers.
 - Parser error after updating: run `:TSUpdate`; the current Tree-sitter main

@@ -37,10 +37,32 @@ return {
   end,
   keys = function()
     local builtin = require("telescope.builtin")
+    local function find_files()
+      local ok, session_manager = pcall(require, "remote-session.session_manager")
+      local session = ok and session_manager.get_active_session() or nil
+      if session then
+        require("config.remote_find_files").find_files(session)
+        return
+      end
+
+      builtin.find_files()
+    end
+
+    local function live_grep()
+      local ok, session_manager = pcall(require, "remote-session.session_manager")
+      local session = ok and session_manager.get_active_session() or nil
+      if session then
+        require("config.remote_live_grep").live_grep(session)
+        return
+      end
+
+      builtin.live_grep()
+    end
+
     return {
-      { "<C-p>", builtin.find_files, desc = "Find files" },
-      { "<leader>ff", builtin.find_files, desc = "Find files" },
-      { "<leader>fg", builtin.live_grep, desc = "Live grep" },
+      { "<C-p>", find_files, desc = "Find files locally or remotely" },
+      { "<leader>ff", find_files, desc = "Find files locally or remotely" },
+      { "<leader>fg", live_grep, desc = "Live grep local or remote repository" },
       { "<leader>fw", builtin.grep_string, desc = "Find word under cursor" },
       { "<leader>fb", builtin.buffers, desc = "Find buffers" },
       { "<leader>fh", builtin.help_tags, desc = "Find help" },

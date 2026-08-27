@@ -38,8 +38,28 @@ return {
       },
     },
     keys = {
-      { "<leader>go", "<cmd>DiffviewOpen<CR>", desc = "Open Git diff" },
-      { "<leader>gc", "<cmd>DiffviewClose<CR>", desc = "Close Git diff" },
+      {
+        "<leader>go",
+        function()
+          local ok, session_manager = pcall(require, "remote-session.session_manager")
+          local session = ok and session_manager.get_active_session() or nil
+          if session then
+            require("config.remote_git_diff").open(session)
+          else
+            vim.cmd("DiffviewOpen")
+          end
+        end,
+        desc = "Open local or remote Git diff",
+      },
+      {
+        "<leader>gc",
+        function()
+          if not require("config.remote_git_diff").close() then
+            vim.cmd("DiffviewClose")
+          end
+        end,
+        desc = "Close local or remote Git diff",
+      },
       { "<leader>gf", "<cmd>DiffviewFocusFiles<CR>", desc = "Focus changed files" },
       { "<leader>gh", "<cmd>DiffviewFileHistory %<CR>", desc = "Current file history" },
       { "<leader>gH", "<cmd>DiffviewFileHistory<CR>", desc = "Repository history" },
