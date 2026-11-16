@@ -99,7 +99,6 @@ local function open_current_file(buf)
   end
   vim.api.nvim_set_current_win(target_win)
   require("async-remote-write.operations").simple_open_remote_file(remote_url, nil, target_win)
-  require("config.remote_tree_follow").reveal(remote_url)
 end
 
 function M.open(session)

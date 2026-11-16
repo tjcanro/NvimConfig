@@ -9,11 +9,10 @@ local function remote_url(remote, relative_path)
 end
 
 local function remote_command(remote, command)
-  return {
-    "ssh",
+  return require("config.remote_ssh").command(
     remote.host,
-    ("cd %s && %s"):format(vim.fn.shellescape(remote.path), command),
-  }
+    ("cd %s && %s"):format(vim.fn.shellescape(remote.path), command)
+  )
 end
 
 local function git_grep_command(remote, prompt)
@@ -56,45 +55,53 @@ local function remote_previewer(remote)
       local range = ("%d,%dp"):format(first_line, last_line)
       local command = ("sed -n %s -- %s"):format(vim.fn.shellescape(range), vim.fn.shellescape(entry.filename))
 
-      self.state.remote_preview_job = vim.system(remote_command(remote, command), { text = true }, function(result)
-        vim.schedule(function()
-          if not self.state or self.state.remote_preview_generation ~= generation then
-            return
-          end
+      -- Moving through Telescope results can generate dozens of previews. Let
+      -- the cursor settle before paying for remote I/O.
+      vim.defer_fn(function()
+        if not self.state or self.state.remote_preview_generation ~= generation then
+          return
+        end
 
-          local bufnr = self.state.bufnr
-          if not bufnr or not vim.api.nvim_buf_is_valid(bufnr) then
-            return
-          end
+        self.state.remote_preview_job = vim.system(remote_command(remote, command), { text = true }, function(result)
+          vim.schedule(function()
+            if not self.state or self.state.remote_preview_generation ~= generation then
+              return
+            end
 
-          local output = result.stdout or ""
-          local lines = vim.split(output, "\n", { plain = true })
-          if lines[#lines] == "" then
-            table.remove(lines)
-          end
-          if result.code ~= 0 and #lines == 0 then
-            local error_text = result.stderr or ""
-            lines = { error_text ~= "" and error_text or "Unable to load remote preview" }
-          end
-          if #lines == 0 then
-            lines = { "" }
-          end
+            local bufnr = self.state.bufnr
+            if not bufnr or not vim.api.nvim_buf_is_valid(bufnr) then
+              return
+            end
 
-          vim.bo[bufnr].modifiable = true
-          vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
-          vim.api.nvim_buf_clear_namespace(bufnr, preview_namespace, 0, -1)
-          vim.bo[bufnr].filetype = vim.filetype.match({ filename = entry.filename }) or ""
-          vim.bo[bufnr].modifiable = false
+            local output = result.stdout or ""
+            local lines = vim.split(output, "\n", { plain = true })
+            if lines[#lines] == "" then
+              table.remove(lines)
+            end
+            if result.code ~= 0 and #lines == 0 then
+              local error_text = result.stderr or ""
+              lines = { error_text ~= "" and error_text or "Unable to load remote preview" }
+            end
+            if #lines == 0 then
+              lines = { "" }
+            end
 
-          local winid = self.state.winid
-          if winid and vim.api.nvim_win_is_valid(winid) then
-            local row = math.min(math.max(entry.lnum - first_line + 1, 1), #lines)
-            local column = math.min(math.max((entry.col or 1) - 1, 0), #lines[row])
-            vim.api.nvim_win_set_cursor(winid, { row, column })
-            vim.wo[winid].cursorline = true
-          end
+            vim.bo[bufnr].modifiable = true
+            vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
+            vim.api.nvim_buf_clear_namespace(bufnr, preview_namespace, 0, -1)
+            vim.bo[bufnr].filetype = vim.filetype.match({ filename = entry.filename }) or ""
+            vim.bo[bufnr].modifiable = false
+
+            local winid = self.state.winid
+            if winid and vim.api.nvim_win_is_valid(winid) then
+              local row = math.min(math.max(entry.lnum - first_line + 1, 1), #lines)
+              local column = math.min(math.max((entry.col or 1) - 1, 0), #lines[row])
+              vim.api.nvim_win_set_cursor(winid, { row, column })
+              vim.wo[winid].cursorline = true
+            end
+          end)
         end)
-      end)
+      end, 180)
     end,
   })
 end
@@ -128,6 +135,7 @@ function M.live_grep(session)
   pickers
     .new({}, {
       prompt_title = ("Remote Live Grep — %s:%s"):format(remote.host, remote.path),
+      debounce = 250,
       finder = finder,
       previewer = remote_previewer(remote),
       sorter = sorters.highlighter_only({}),
@@ -143,7 +151,6 @@ function M.live_grep(session)
             line = math.max((selection.lnum or 1) - 1, 0),
             character = math.max((selection.col or 1) - 1, 0),
           })
-          require("config.remote_tree_follow").reveal(selection.remote_url)
         end)
         map("i", "<C-Space>", actions.to_fuzzy_refine)
         return true

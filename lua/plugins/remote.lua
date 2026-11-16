@@ -20,6 +20,7 @@ return {
     },
     config = function()
       require("telescope-remote-buffer").setup()
+      require("config.remote_ssh").enable_plugin_multiplexing()
 
       require("remote-ssh").setup({
         capabilities = require("blink.cmp").get_lsp_capabilities(),

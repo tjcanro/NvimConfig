@@ -43,7 +43,6 @@ function M.find_files(session)
 
           actions.close(prompt_bufnr)
           require("async-remote-write.operations").simple_open_remote_file(selection.remote_url)
-          require("config.remote_tree_follow").reveal(selection.remote_url)
         end)
         return true
       end,

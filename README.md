@@ -128,13 +128,18 @@ or terminal to hide it; reopening it preserves the running shell. The
 
 ### Remote servers
 
-The `nico-dev` tmuxp session starts a local Neovim connected to
-`colossus-dev:/home/tcanro/infra-controller-dev`. Neovim, its configuration,
-and its plugins remain on the Mac. Remote files are fetched and saved over
-SSH/rsync, while the integrated terminal runs on `colossus-dev`. Nothing is
-installed on the remote host by this setup. Its standard layout is a
-full-height tree on the left, the editor at upper right, and the remote
-terminal below the editor.
+For native remote editing, install Neovim, this configuration, and the
+supporting tools in the remote user's home directory, then launch Neovim over
+SSH from the project directory. Plugins, ripgrep, parsers, language servers,
+the bottom terminal, and Sidekick then run on the remote host. Neo-tree and
+Telescope access the repository directly. Keep the remote configuration and
+plugins synchronized after local changes; this repository does not yet
+provide a remote bootstrap or synchronization command.
+
+#### Local-editor fallback
+
+For a server where Neovim cannot be installed, keep Neovim on the Mac and open
+the repository through the SSH-backed editor:
 
 Open any other server or repository with:
 
@@ -187,17 +192,16 @@ dotfiles, while excluding paths ignored by Git.
 
 Tree-sitter syntax and ordinary text search need no remote editor install.
 Semantic LSP actions such as `gd`, `gr`, and `gi` require the corresponding
-language server to already exist in the active remote toolchain. For this
-repository, `colossus-dev` currently lacks the Rust analyzer component for its
-Rust 1.97.1 toolchain. If remote installation is approved later, the minimal
-upgrade is:
+language server to already exist in the active remote toolchain. For Rust,
+install the matching component when the host permits it:
 
 ```bash
-ssh colossus-dev 'rustup component add rust-analyzer --toolchain 1.97.1'
+rustup component add rust-analyzer
 ```
 
-After that, reopen the Rust buffer or run `:RemoteLspStart`. This command is
-documented only; the Neovim setup does not run it.
+After that, reopen the Rust buffer or run `:RemoteLspStart`. Hosts without a
+remote language server still retain tree-sitter highlighting, file search, and
+text search.
 
 ### tmux panes and windows
 
@@ -250,15 +254,41 @@ back on. `:ConformInfo` shows the formatter selected for the current file.
 | Stage / reset hunk | `<leader>hs` / `<leader>hr` |
 | Preview hunk | `<leader>hp` |
 | Blame line | `<leader>hb` |
+| Toggle inline blame | `<leader>hB` |
 | Previous / next function | `[f` / `]f` |
 | Previous / next class | `[c` / `]c` |
 | Select function | `if` / `af` |
 | Select class | `ic` / `ac` |
 | Select parameter | `ip` / `ap` |
 
+Inline blame starts enabled and shows the current line's author, date, and
+commit summary after 700 ms. Press `Space`, `h`, then `Shift-b` to toggle it
+for the current Neovim session, or run `:Gitsigns toggle_current_line_blame`.
+`<leader>hb` still opens blame details for the current line.
+
 `nvim-surround` keeps its standard mappings: `ys` adds a surrounding pair,
 `ds` deletes it, and `cs` changes it. `gcc` comments a line and `gc` comments a
 motion or visual selection.
+
+### Rebase conflicts with CodeDiff
+
+Open CodeDiff with `<leader>gD` (`Space`, `g`, `Shift-d`) or `:CodeDiff`.
+During a rebase, select a conflicted file in the explorer to resolve it with
+both versions and an editable result pane.
+
+| Operation | Mapping |
+| --- | --- |
+| Next / previous conflict | `]x` / `[x` |
+| Accept current / incoming change | `<leader>co` / `<leader>ct` |
+| Accept both changes | `<leader>cb` |
+| Stage resolved file | `-` |
+| Show contextual mappings | `g?` |
+| Close CodeDiff | `q` |
+
+Save the result with `:w`, stage each resolved file, then run
+`git rebase --continue` in the terminal. During a rebase, “current/ours” is
+the branch being rebased onto plus commits already replayed; “incoming/theirs”
+is the commit being replayed.
 
 ### Code review
 
@@ -379,7 +409,14 @@ creates another independent tmux-backed process and replaces the visible agent
 panel; earlier conversations remain running and are available through
 `<leader>as`.
 
-When a `colossus-dev` remote session is active, `<leader>aa`, `<leader>ap`,
+When Neovim itself runs on the remote host, Sidekick's ordinary Claude and
+Codex tools operate against that host's working tree. `<leader>aa` opens the
+agent next to the editor, and `<leader>an` creates another independent Claude
+session at the current repository root. The corresponding agent CLI must be
+installed and authenticated on the remote host.
+
+When using the local-editor fallback with a `colossus-dev` remote session
+active, `<leader>aa`, `<leader>ap`,
 `<leader>at`, and `Ctrl-.` automatically use Claude inside the persistent
 `nico-agent` tmux session on the server. The agent starts in
 `/home/tcanro/sim-pods` with the dedicated `simulation-helper` role. The

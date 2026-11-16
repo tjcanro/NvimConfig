@@ -17,6 +17,7 @@ return {
         map({ "n", "x" }, "<leader>hr", gs.reset_hunk, "Reset hunk")
         map("n", "<leader>hp", gs.preview_hunk, "Preview hunk")
         map("n", "<leader>hb", gs.blame_line, "Blame line")
+        map("n", "<leader>hB", gs.toggle_current_line_blame, "Toggle inline blame")
         map("n", "<leader>hd", gs.diffthis, "Diff against index")
       end,
     },
