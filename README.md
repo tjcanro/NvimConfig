@@ -133,8 +133,11 @@ supporting tools in the remote user's home directory, then launch Neovim over
 SSH from the project directory. Plugins, ripgrep, parsers, language servers,
 the bottom terminal, and Sidekick then run on the remote host. Neo-tree and
 Telescope access the repository directly. Keep the remote configuration and
-plugins synchronized after local changes; this repository does not yet
-provide a remote bootstrap or synchronization command.
+plugins synchronized after local changes. The companion
+[dev-workspace](https://github.com/tjcanro/dev-workspace) repository provides
+`workbench remote edit`, `remote sync-nvim --dry-run`, and persistent remote
+terminals. Configure its local profile first. It uses existing remote tools;
+it does not install Neovim or start a VM.
 
 #### Local-editor fallback
 
@@ -150,7 +153,7 @@ Open any other server or repository with:
 For example:
 
 ```vim
-:RemoteSession colossus-dev//home/tcanro/infra-controller-dev
+:RemoteSession dev-host//home/user/project
 ```
 
 | Operation | Mapping or command |
@@ -185,6 +188,12 @@ grep` inside the repository over SSH. Results and previews update while typing,
 and `Enter` opens the matching remote file at its line and column. It searches
 tracked files in the remote working tree; no remote Neovim or ripgrep
 installation is required.
+
+File search, grep, previews, and Git diffs share SSH connections through
+`config.remote_ssh`. The helper also adapts the remote editor plugin's SSH/SCP
+builders to use `ControlMaster=auto`, `ControlPersist=15m`, and a private socket
+directory under Neovim's state directory. Host aliases and authentication
+continue to come from OpenSSH configuration.
 
 Remote file search uses one `git ls-files` call over SSH instead of scanning
 the Mac. It includes tracked files and non-ignored untracked files, including

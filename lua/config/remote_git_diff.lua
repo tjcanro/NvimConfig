@@ -27,7 +27,7 @@ local function refresh(buf)
     view.context
   )
 
-  view.job = vim.system({ "ssh", view.remote.host, command }, { text = true }, function(result)
+  view.job = vim.system(require("config.remote_ssh").command(view.remote.host, command), { text = true }, function(result)
     vim.schedule(function()
       if not views[buf] or not vim.api.nvim_buf_is_valid(buf) then
         return
